@@ -1,3 +1,0 @@
-"""
-Testes automatizados dos scrapers.
-"""
