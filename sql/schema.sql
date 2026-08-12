@@ -1,0 +1,2 @@
+-- Schema inicial do banco car_scraper.
+-- Sera definido em detalhe na Fase 1 do roadmap (ver .md de contexto no Obsidian).

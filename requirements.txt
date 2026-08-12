@@ -1,0 +1,6 @@
+selenium
+webdriver-manager
+pandas
+sqlalchemy
+mysql-connector-python
+python-dotenv
