@@ -1,9 +1,9 @@
 """
-Configurações gerais do projeto.
+Configuracoes gerais do projeto.
 
-Centraliza a leitura de variáveis de ambiente (.env) e constantes
-usadas em várias partes do código, para evitar valores "soltos"
-espalhados pelos scrapers, ETL e conexão com banco.
+Centraliza a leitura de variaveis de ambiente (.env) e constantes
+usadas em varias partes do codigo, para evitar valores "soltos"
+espalhados pelos scrapers, ETL e conexao com banco.
 """
 
 import os
@@ -21,5 +21,5 @@ DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 # --- Selenium ---
 HEADLESS = os.getenv("HEADLESS", "True") == "True"
 
-# --- Constantes do domínio (ajustar conforme o projeto avança) ---
+# --- Constantes do dominio ---
 FONTES_SUPORTADAS = ["olx", "marketplace"]
