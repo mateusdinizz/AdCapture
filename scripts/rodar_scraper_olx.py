@@ -7,8 +7,14 @@ Como rodar (raiz do projeto, venv ativado):
     python scripts/rodar_scraper_olx.py
 
 Se os dados vierem incompletos (preco/km/cidade como None com
-frequencia), rode o modo debug primeiro:
+frequencia), rode o modo debug:
     python scripts/rodar_scraper_olx.py --debug
+
+Se os anuncios capturados nao baterem com a ordem/conteudo real da
+pagina (pulando anuncios, por exemplo), rode o modo listar - ele
+mostra TODOS os links encontrados, em ordem, com a URL real usada
+(util para comparar lado a lado com o navegador manualmente):
+    python scripts/rodar_scraper_olx.py --listar
 """
 
 import sys
@@ -40,6 +46,20 @@ def main():
             scraper.depurar_estrutura(URLS_BUSCA["Recife"]["url"])
         finally:
             scraper.fechar()
+        return
+
+    if "--listar" in sys.argv:
+        print("Modo LISTAR: mostrando todos os links encontrados, em ordem...\n")
+        for regiao, config in URLS_BUSCA.items():
+            print("=" * 70)
+            print(f"REGIAO: {regiao}")
+            print("=" * 70)
+            scraper = OlxScraper(headless=False)
+            try:
+                scraper.listar_todos_os_links(config["url"])
+            finally:
+                scraper.fechar()
+            print()
         return
 
     todos_anuncios = []
