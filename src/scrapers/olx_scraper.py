@@ -116,11 +116,27 @@ class OlxScraper(BaseScraper):
             if href_final:
                 href_final = href_final.split("?")[0]
 
+            # Em cards patrocinados/VIP, a tag <a> engloba todo o card.
+            # Em cards padrao/organicos da OLX, a tag <a> engloba apenas o titulo <h2>,
+            # ficando preco, km, ano e localizacao nos elementos ancestrais do card.
             texto_card = link.text
-            linhas = [l.strip() for l in texto_card.split("\n") if l.strip()]
-            # Remove textos de interface que nao sao dado do anuncio
-            linhas = [l for l in linhas if l not in ("Adicionar aos favoritos",)]
-            titulo = linhas[0] if linhas else (link.get_attribute("title") or "Sem titulo")
+            try:
+                card_container = link.find_element(
+                    By.XPATH,
+                    "./ancestor::section[contains(@class, 'olx-adcard')] | "
+                    "./ancestor::div[contains(@class, 'olx-adcard__content')] | "
+                    "./ancestor::div[contains(@class, 'adCardContent')]"
+                )
+                texto_card = card_container.text
+            except Exception:
+                pass
+
+            titulo = link.get_attribute("title")
+            if not titulo:
+                linhas = [l.strip() for l in link.text.split("\n") if l.strip()]
+                # Remove textos de interface que nao sao dado do anuncio
+                linhas = [l for l in linhas if l not in ("Adicionar aos favoritos",)]
+                titulo = linhas[0] if linhas else "Sem titulo"
 
             anuncios.append({
                 "id_externo": id_externo,
@@ -243,8 +259,21 @@ class OlxScraper(BaseScraper):
             valido = "OK" if match_id else "IGNORADO (nao bate no padrao de anuncio)"
 
             texto = link.text
-            linhas = [l.strip() for l in texto.split("\n") if l.strip()]
-            titulo = linhas[0] if linhas else "(sem texto)"
+            try:
+                card_container = link.find_element(
+                    By.XPATH,
+                    "./ancestor::section[contains(@class, 'olx-adcard')] | "
+                    "./ancestor::div[contains(@class, 'olx-adcard__content')] | "
+                    "./ancestor::div[contains(@class, 'adCardContent')]"
+                )
+                texto = card_container.text
+            except Exception:
+                pass
+
+            titulo = link.get_attribute("title")
+            if not titulo:
+                linhas = [l.strip() for l in link.text.split("\n") if l.strip()]
+                titulo = linhas[0] if linhas else "(sem texto)"
 
             # Verifica se o texto do card ja tem preco/km carregados,
             # independente do link funcionar ou nao - para descobrir se
