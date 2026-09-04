@@ -37,6 +37,7 @@ from urllib.parse import urlparse
 from selenium.webdriver.common.by import By
 
 from src.scrapers.base_scraper import BaseScraper
+from src.etl.transform import extrair_marca_modelo
 
 
 class OlxScraper(BaseScraper):
@@ -138,12 +139,14 @@ class OlxScraper(BaseScraper):
                 linhas = [l for l in linhas if l not in ("Adicionar aos favoritos",)]
                 titulo = linhas[0] if linhas else "Sem titulo"
 
+            marca, modelo = extrair_marca_modelo(titulo)
+
             anuncios.append({
                 "id_externo": id_externo,
                 "titulo": titulo,
                 "url": href_final,
-                "marca": None,    # extraido do titulo depois, na Fase 3 (ETL)
-                "modelo": None,   # idem
+                "marca": marca,
+                "modelo": modelo,
                 "ano": self._extrair_ano(texto_card),
                 "km": self._extrair_km(texto_card),
                 "preco": self._extrair_preco(texto_card),

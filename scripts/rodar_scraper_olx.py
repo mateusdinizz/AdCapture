@@ -80,7 +80,7 @@ def main():
         todos_anuncios.extend(anuncios)
 
     df = pd.DataFrame(todos_anuncios)
-    print(df[["titulo", "preco", "km", "ano", "cidade"]], "\n")
+    print(df[["titulo", "marca", "modelo", "preco", "km", "ano", "cidade"]], "\n")
 
     caminho_csv = "anuncios_olx_teste.csv"
     df.to_csv(caminho_csv, index=False, quoting=csv.QUOTE_NONNUMERIC)
