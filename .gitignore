@@ -222,3 +222,10 @@ __marimo__/
 
 # Obsidian
 .obsidian/
+
+# Dados capturados e arquivos de saída
+*.csv
+*.xlsx
+*.json
+scripts/*.csv
+data/
