@@ -22,6 +22,7 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+import csv
 import pandas as pd
 
 from src.scrapers.olx_scraper import OlxScraper
@@ -83,6 +84,7 @@ def main():
 
     caminho_csv = "anuncios_olx_teste.csv"
     df.to_csv(caminho_csv, index=False)
+    df.to_csv(caminho_csv, index=False, quoting=csv.QUOTE_NONNUMERIC)
     print(f"Salvo em: {caminho_csv}")
     print("\nAbra o CSV e compare alguns anuncios com o site real da OLX")
     print("para confirmar se preco, km, ano e cidade bateram certinho.")

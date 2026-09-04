@@ -21,16 +21,19 @@ o carregamento parece depender de deteccao de scroll continuo, nao de
 poucos ANTES de comecar a extrair (_rolar_pagina_gradualmente), em vez
 de rolar elemento por elemento durante a extracao.
 
-CIDADE: nao foi encontrada de forma confiavel na pagina de busca (nao
-esta em nenhum elemento "pai" ate 5 niveis acima do link, testado via
-depurar_estrutura()). Por isso o campo cidade usa uma aproximacao: a
-regiao que foi buscada (Recife ou Jaboatao), passada via parametro
-cidade_padrao. O bairro exato fica para uma melhoria futura, visitando
-a pagina de detalhe de cada anuncio.
+HIPOTESE EM TESTE: o coletar_anuncios foi alinhado para se comportar
+EXATAMENTE como o listar_todos_os_links (que sempre retorna links
+funcionais) - rola a pagina inteira UMA VEZ, do topo ao fim, e le os
+dados direto depois, sem tocar no scroll de novo por item. A versao
+anterior fazia scrollIntoView() individual por anuncio, o que causava
+um vaivem de scroll (sobe/desce) que pode ter corrompido o conteudo ja
+carregado - possivel efeito de lista virtualizada, que re-renderiza
+cards quando a posicao de scroll muda de forma abrupta.
 """
 
 import re
 import time
+from urllib.parse import urlparse
 from selenium.webdriver.common.by import By
 
 from src.scrapers.base_scraper import BaseScraper
@@ -77,31 +80,52 @@ class OlxScraper(BaseScraper):
         links = self.driver.find_elements(By.CSS_SELECTOR, seletor_links)
 
         anuncios = []
-        urls_vistas = set()
+        ids_vistos = set()
 
         for link in links:
-            url = link.get_attribute("href")
-            if not url or url in urls_vistas:
+            href_bruto = link.get_attribute("href")
+            if not href_bruto:
                 continue
 
-            match_id = self.PADRAO_URL_ANUNCIO.search(url)
+            # Checagem de dominio: a OLX mistura anuncios patrocinados de
+            # redes de terceiros (ex: Gemini/Yahoo Ads) dentro do feed de
+            # resultados, com URL formatada de um jeito parecido com
+            # anuncio real. So seguimos se o link aponta para a OLX.
+            dominio = urlparse(href_bruto).netloc
+            if not dominio.endswith("olx.com.br"):
+                continue
+
+            match_id = self.PADRAO_URL_ANUNCIO.search(href_bruto)
             if not match_id:
                 # Provavelmente um link de categoria/marca (ex: "todas as marcas"),
                 # nao um anuncio de verdade - ignora e segue para o proximo
                 continue
 
-            urls_vistas.add(url)
-            texto_card = link.text
+            id_externo = match_id.group(1)
+            if id_externo in ids_vistos:
+                continue
 
+            # Alinhado ao comportamento do --listar (listar_todos_os_links):
+            # rola a pagina UMA VEZ so, do topo ate o fim, e depois le os
+            # dados direto, sem mexer no scroll de novo. A hipotese testada
+            # aqui e que o scrollIntoView() por item (usado antes) causava
+            # um vaivem de scroll que corrompia o conteudo ja carregado
+            # (possivel lista virtualizada, que re-renderiza cards quando
+            # o scroll muda de posicao de forma abrupta).
+            href_final = link.get_attribute("href")
+            if href_final:
+                href_final = href_final.split("?")[0]
+
+            texto_card = link.text
             linhas = [l.strip() for l in texto_card.split("\n") if l.strip()]
             # Remove textos de interface que nao sao dado do anuncio
             linhas = [l for l in linhas if l not in ("Adicionar aos favoritos",)]
             titulo = linhas[0] if linhas else (link.get_attribute("title") or "Sem titulo")
 
             anuncios.append({
-                "id_externo": match_id.group(1),
+                "id_externo": id_externo,
                 "titulo": titulo,
-                "url": url,
+                "url": href_final,
                 "marca": None,    # extraido do titulo depois, na Fase 3 (ETL)
                 "modelo": None,   # idem
                 "ano": self._extrair_ano(texto_card),
@@ -113,6 +137,7 @@ class OlxScraper(BaseScraper):
                 "telefone": None,
                 "whatsapp": None,
             })
+            ids_vistos.add(id_externo)
 
             if len(anuncios) >= max_anuncios:
                 break
@@ -139,8 +164,11 @@ class OlxScraper(BaseScraper):
                 break
             altura_anterior = altura_atual
 
-        # Da um respiro final para qualquer requisicao de rede em andamento terminar
-        time.sleep(0.5)
+        # Da um respiro final maior para qualquer requisicao de rede/hidratacao
+        # de componente em andamento terminar. O href de cada card pode demorar
+        # um pouco mais para assentar no valor definitivo do que o preco/km -
+        # essa pausa maior e uma tentativa de dar tempo suficiente para isso.
+        time.sleep(2.5)
 
     def _extrair_preco(self, texto: str):
         matches = self.PADRAO_PRECO.findall(texto)
@@ -214,12 +242,22 @@ class OlxScraper(BaseScraper):
             duplicado = " [DUPLICADO]" if url in urls_vistas else ""
             valido = "OK" if match_id else "IGNORADO (nao bate no padrao de anuncio)"
 
-            linhas = [l.strip() for l in link.text.split("\n") if l.strip()]
+            texto = link.text
+            linhas = [l.strip() for l in texto.split("\n") if l.strip()]
             titulo = linhas[0] if linhas else "(sem texto)"
+
+            # Verifica se o texto do card ja tem preco/km carregados,
+            # independente do link funcionar ou nao - para descobrir se
+            # sao dois problemas separados (link generico E preco/km
+            # faltando) ou o mesmo problema (tudo falha junto).
+            tem_preco = "R$" in texto
+            preco = self._extrair_preco(texto) if match_id else None
+            km = self._extrair_km(texto) if match_id else None
 
             id_str = match_id.group(1) if match_id else "-"
             print(f"[{i:02d}] id={id_str} | {valido}{duplicado}")
             print(f"     titulo: {titulo}")
+            print(f"     tem 'R$' no texto: {tem_preco} | preco extraido: {preco} | km extraido: {km}")
             print(f"     url: {url}\n")
 
             urls_vistas.add(url)
