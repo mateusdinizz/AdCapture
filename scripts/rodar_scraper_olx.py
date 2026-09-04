@@ -83,7 +83,6 @@ def main():
     print(df[["titulo", "preco", "km", "ano", "cidade"]], "\n")
 
     caminho_csv = "anuncios_olx_teste.csv"
-    df.to_csv(caminho_csv, index=False)
     df.to_csv(caminho_csv, index=False, quoting=csv.QUOTE_NONNUMERIC)
     print(f"Salvo em: {caminho_csv}")
     print("\nAbra o CSV e compare alguns anuncios com o site real da OLX")
