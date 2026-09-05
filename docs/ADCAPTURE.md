@@ -1,6 +1,6 @@
 # 🚗 Projeto: Captura de Anúncios de Carros (OLX / Marketplace)
 
-> Arquivo de contexto do projeto — atualizar conforme o progresso avança. Última atualização: 2026-08-14 (Fase 2 em andamento — bugs de lazy-load e regex de ano corrigidos, aguardando reteste)
+> Arquivo de contexto do projeto — atualizar conforme o progresso avança. Última atualização: 2026-08-15 (Fase 2 concluída — scraper OLX validado ponta a ponta)
 
 ---
 
@@ -216,20 +216,26 @@ Esse mesmo critério deve ser aplicado quando for modelar `favoritos` e `perfis_
 - [x] Rodar o script no MySQL Workbench e confirmar execução sem erros
 - [x] Testar conexão Python → MySQL via SQLAlchemy (insert manual de teste)
 
-### Fase 2 — Primeiro scraper (OLX) 🔶 em andamento
+### Fase 2 — Primeiro scraper (OLX) ✅
 
 - [x] Criar `driver_factory.py` (setup do Chrome/Selenium, com camadas anti-detecção)
 - [x] Criar `base_scraper.py` (estrutura comum, waits, métodos abstratos)
 - [x] Criar `olx_scraper.py` funcional, capturando um conjunto pequeno de anúncios de teste
 - [x] Validar dados capturados manualmente (rodado contra o site real — título, preço, km, ano confirmados)
-- [ ] Rodar a versão corrigida (scroll/lazy-load + fix do ano) e confirmar que preço/km vêm completos em todos os itens, não só nos primeiros
-- [ ] Decidir se/como capturar bairro exato (hoje usa aproximação pela região buscada)
+- [x] Rodar a versão corrigida e confirmar que preço/km vêm completos em todos os itens, não só nos primeiros
+- [x] Bairro exato — decidido usar aproximação pela região buscada (cidade_padrao); bairro específico fica como melhoria futura, não bloqueia o fechamento da fase
 
 ### Fase 3 — ETL com pandas
 
 - [ ] Função de limpeza de preço, km, ano (normalizar formatos)
 - [ ] Função de deduplicação de anúncios
 - [ ] Pipeline conectando scraper → limpeza → MySQL
+
+> **Backlog avaliado (não agendado ainda):** Integração com API da FIPE (terceiro, `parallelum.com.br`) para substituir a heurística de regex de marca/modelo por dados oficiais, e futuramente comparar preço do anúncio com preço FIPE (alimenta a Fase 11 - Score de oportunidades).
+> 
+> **Avaliação feita em 2026-08-15:** API não é uma consulta direta - exige cascata de 4 chamadas (marcas → modelos → anos → valor), limite de 500 req/dia grátis (1000 com token), e o trabalho real está no **matching difuso** entre o título capturado (ex: "Onix Plus LTZ") e o nome oficial da FIPE (ex: "ONIX PLUS 10 MT LTZ") - exige lib de similaridade de texto (`rapidfuzz`), sujeito a erros. Estimativa: ~8-14h de trabalho (cliente API + cache local + matching + validação + integração no banco), prováveis 3-5 sessões.
+> 
+> **Decisão: adiado.** Isso já está coberto pela Fase 11 (Score de oportunidades) do roadmap - não desbloqueia nada usável antes da interface existir, e a heurística de regex atual (`extrair_marca_modelo` em `clean.py`) já foi validada com 12 títulos reais, incluindo casos difíceis (Peugeot 2008, Citroën C3, Chevrolet S10). Reavaliar quando chegar na Fase 11.
 
 ### Fase 4 — Segunda fonte (Marketplace)
 
@@ -288,8 +294,7 @@ Esse mesmo critério deve ser aplicado quando for modelar `favoritos` e `perfis_
 > Espaço livre para registrar decisões técnicas, problemas encontrados e soluções, conforme o projeto avança.
 
 ### 🔖 Onde paramos (retomar por aqui)
-
-Estamos no meio da **Fase 2**. O `olx_scraper.py` já roda contra o site real e captura título/ano corretamente em 100% dos casos. Preço e km vinham incompletos nos anúncios mais abaixo da página (bug de lazy loading) e o ano às vezes vinha errado (bug de regex pegando número de modelo em vez do ano). **As duas correções já foram feitas no código**, mas ainda precisam ser **coladas no projeto e testadas de novo** (rodar `python scripts/rodar_scraper_olx.py` e conferir se todos os 20 anúncios do CSV vêm com preço/km preenchidos e o ano certo). Depois disso, a Fase 2 fecha e seguimos pra Fase 3 (ETL com pandas).
+Fase 2 concluída — scraper da OLX funcionando ponta a ponta (título, preço, km, ano e link corretos em todos os anúncios testados). Próximo passo: **Fase 3 — ETL com pandas**: função de limpeza de preço/km/ano (normalizar formatos, já que o scraper hoje entrega dados relativamente limpos, mas vale garantir robustez), função de deduplicação de anúncios, e o pipeline conectando scraper → limpeza → MySQL (usando os models do `src/database/models.py` já validados na Fase 1).
 
 - 2026-08-12: Decisão de simplificar a stack inicial removendo `requests`/`BeautifulSoup4` e `schedule`/`cron` das dependências imediatas, focando primeiro em Selenium + pandas + MySQL.
 - 2026-08-12: Definido que o repositório no GitHub será público (objetivo de portfólio), com licença MIT e `.gitignore` baseado no template Python + complementos manuais. Atenção especial para nunca versionar dados capturados reais ou credenciais.
@@ -304,3 +309,5 @@ Estamos no meio da **Fase 2**. O `olx_scraper.py` já roda contra o site real e 
 - 2026-08-14: **Primeiro teste real do scraper contra a OLX (modo debug).** Resultado revelou que o próprio link do anúncio já contém título, km, ano e preço no texto — não é necessário (e é prejudicial) subir para elementos "pai", porque em níveis mais altos da árvore o texto passa a misturar vários anúncios vizinhos ao mesmo tempo (bug real identificado e corrigido). Cidade/bairro não foi encontrada em nenhum nível — resolvido usando a região buscada (Recife/Jaboatão) como aproximação via parâmetro `cidade_padrao`.
 - 2026-08-14: **Primeira rodada completa do scraper (20 anúncios, Recife + Jaboatão).** Título e ano vieram corretos em 100% dos casos. Preço e km só vieram completos nos 3 primeiros itens de cada busca — diagnosticado como **lazy loading**: a OLX só renderiza preço/km de verdade quando o card entra na área visível da tela. Também identificado bug no regex de ano: pegava o primeiro número de 4 dígitos parecido com ano, mas alguns modelos têm número no nome (ex: "Peugeot 2008"), fazendo o scraper capturar o nome do modelo em vez do ano real.
 - 2026-08-14: **Correções aplicadas ao `olx_scraper.py`:** (1) adicionado `scrollIntoView()` + espera curta pelo "R$" aparecer antes de ler o texto de cada card, forçando o lazy loading a carregar; (2) `_extrair_ano` corrigido para pegar o **último** número de 4 dígitos do texto, não o primeiro (o ano real sempre aparece por último; testado e confirmado com o caso real do "Peugeot 2008" → agora extrai 2017 corretamente). Correções validadas por simulação com os dados reais coletados, mas **ainda não re-testadas contra o site ao vivo** — próximo passo ao retomar o projeto.
+- 2026-08-15: **Fase 2 concluída.** Descoberta importante que corrige o diagnóstico anterior: o bug do "link genérico" (redirecionando pra home) **não era causado por virtualização de scroll ou lazy loading do href** — era um problema de **formatação do CSV**: campos sem aspas (quoting) faziam vírgulas dentro de algum valor (ex: título com vírgula) deslocarem as colunas seguintes, corrompendo a URL lida. Corrigido usando aspas para delimitar os campos no CSV. Em paralelo, o `coletar_anuncios` também foi alinhado ao comportamento do `listar_todos_os_links` (removido o scroll individual por item, que causava vaivém de scroll). Com as duas correções, um novo teste completo confirmou: título, ano, preço e km vêm corretos em 100% dos anúncios (não só nos 3 primeiros), e os links abrem o anúncio certo. Scraper da OLX validado ponta a ponta. Próximo passo: Fase 3 (ETL com pandas).
+- 2026-08-15: Avaliada a integração com a API da FIPE para enriquecer marca/modelo e futuro comparativo de preço. Decisão: adiar para a Fase 11 (já é o lugar natural no roadmap), evitando interromper o momentum atual (Fase 3/4) por uma funcionalidade que só teria valor de uso depois que a interface existir. Detalhes da avaliação de esforço registrados no roadmap.
