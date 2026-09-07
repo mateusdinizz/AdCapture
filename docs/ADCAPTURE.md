@@ -238,9 +238,9 @@ Esse mesmo critério deve ser aplicado quando for modelar `favoritos` e `perfis_
 > **Decisão: adiado.** Isso já está coberto pela Fase 11 (Score de oportunidades) do roadmap - não desbloqueia nada usável antes da interface existir, e a heurística de regex atual (`extrair_marca_modelo` em `clean.py`) já foi validada com 12 títulos reais, incluindo casos difíceis (Peugeot 2008, Citroën C3, Chevrolet S10). Reavaliar quando chegar na Fase 11.
 
 ### Fase 4 — Ampliar captura OLX (antes: "Segunda fonte") 
-- [ ] Aumentar `max_anuncios` por região (hoje limitado a 10-20 para testes)
-- [ ] Adicionar mais cidades da região metropolitana do Recife (Olinda, Paulista, Camaragibe) - reaproveitando o mesmo `olx_scraper.py`, só variando a URL de busca
-- [ ] Rodar o pipeline algumas vezes para "engordar" a base antes de conectar à interface
+- [x] Aumentar `max_anuncios` por região (hoje limitado a 10-20 para testes)
+- [x] Adicionar mais cidades da região metropolitana do Recife (Olinda, Paulista, Camaragibe) - reaproveitando o mesmo `olx_scraper.py`, só variando a URL de busca
+- [x] Rodar o pipeline algumas vezes para "engordar" a base antes de conectar à interface
 
 ### Fase 5 — Definir stack de interface ✅
 

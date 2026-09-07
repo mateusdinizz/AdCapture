@@ -36,6 +36,14 @@ URLS_BUSCA = {
         "url": "https://www.olx.com.br/autos-e-pecas/carros-vans-e-utilitarios/estado-pe/grande-recife/grande-recife/jaboatao-dos-guararapes",
         "cidade_padrao": "Jaboatão dos Guararapes",
     },
+    "Olinda": {
+        "url": "https://www.olx.com.br/autos-e-pecas/carros-vans-e-utilitarios/estado-pe/grande-recife/grande-recife/olinda",
+        "cidade_padrao": "Olinda",
+    },
+    "Paulista": {
+        "url": "https://www.olx.com.br/autos-e-pecas/carros-vans-e-utilitarios/estado-pe/grande-recife/grande-recife/paulista",
+        "cidade_padrao": "Paulista",
+    },
 }
 
 

@@ -28,10 +28,18 @@ URLS_BUSCA = {
         "url": "https://www.olx.com.br/autos-e-pecas/carros-vans-e-utilitarios/estado-pe/grande-recife/grande-recife/jaboatao-dos-guararapes",
         "cidade_padrao": "Jaboatão dos Guararapes",
     },
+    "Olinda": {
+        "url": "https://www.olx.com.br/autos-e-pecas/carros-vans-e-utilitarios/estado-pe/grande-recife/grande-recife/olinda",
+        "cidade_padrao": "Olinda",
+    },
+    "Paulista": {
+        "url": "https://www.olx.com.br/autos-e-pecas/carros-vans-e-utilitarios/estado-pe/grande-recife/grande-recife/paulista",
+        "cidade_padrao": "Paulista",
+    },
 }
 
 
-def coletar_todos_os_anuncios(max_por_regiao: int = 20) -> list[dict]:
+def coletar_todos_os_anuncios(max_por_regiao: int = 10) -> list[dict]:
     """Roda o scraper em todas as regioes configuradas e junta os resultados."""
     todos = []
     for regiao, config in URLS_BUSCA.items():
