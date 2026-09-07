@@ -225,11 +225,11 @@ Esse mesmo critério deve ser aplicado quando for modelar `favoritos` e `perfis_
 - [x] Rodar a versão corrigida e confirmar que preço/km vêm completos em todos os itens, não só nos primeiros
 - [x] Bairro exato — decidido usar aproximação pela região buscada (cidade_padrao); bairro específico fica como melhoria futura, não bloqueia o fechamento da fase
 
-### Fase 3 — ETL com pandas
+### Fase 3 — ETL com pandas ✅
 
-- [ ] Função de limpeza de preço, km, ano (normalizar formatos)
-- [ ] Função de deduplicação de anúncios
-- [ ] Pipeline conectando scraper → limpeza → MySQL
+- [x] Função de limpeza de preço, km, ano (normalizar formatos)
+- [x] Função de deduplicação de anúncios
+- [x] Pipeline conectando scraper → limpeza → MySQL
 
 > **Backlog avaliado (não agendado ainda):** Integração com API da FIPE (terceiro, `parallelum.com.br`) para substituir a heurística de regex de marca/modelo por dados oficiais, e futuramente comparar preço do anúncio com preço FIPE (alimenta a Fase 11 - Score de oportunidades).
 > 
@@ -294,7 +294,7 @@ Esse mesmo critério deve ser aplicado quando for modelar `favoritos` e `perfis_
 > Espaço livre para registrar decisões técnicas, problemas encontrados e soluções, conforme o projeto avança.
 
 ### 🔖 Onde paramos (retomar por aqui)
-Fase 2 concluída — scraper da OLX funcionando ponta a ponta (título, preço, km, ano e link corretos em todos os anúncios testados). Próximo passo: **Fase 3 — ETL com pandas**: função de limpeza de preço/km/ano (normalizar formatos, já que o scraper hoje entrega dados relativamente limpos, mas vale garantir robustez), função de deduplicação de anúncios, e o pipeline conectando scraper → limpeza → MySQL (usando os models do `src/database/models.py` já validados na Fase 1).
+Fase 3 concluída — pipeline scraper→ETL→MySQL funcionando ponta a ponta, com histórico de preço automático. Próximo passo: **Fase 4 — Segunda fonte (Marketplace)**: avaliar estratégia de login (conta separada do pai?), criar `marketplace_scraper.py`, integrar ao mesmo pipeline de ETL.
 
 - 2026-08-12: Decisão de simplificar a stack inicial removendo `requests`/`BeautifulSoup4` e `schedule`/`cron` das dependências imediatas, focando primeiro em Selenium + pandas + MySQL.
 - 2026-08-12: Definido que o repositório no GitHub será público (objetivo de portfólio), com licença MIT e `.gitignore` baseado no template Python + complementos manuais. Atenção especial para nunca versionar dados capturados reais ou credenciais.
@@ -311,3 +311,26 @@ Fase 2 concluída — scraper da OLX funcionando ponta a ponta (título, preço,
 - 2026-08-14: **Correções aplicadas ao `olx_scraper.py`:** (1) adicionado `scrollIntoView()` + espera curta pelo "R$" aparecer antes de ler o texto de cada card, forçando o lazy loading a carregar; (2) `_extrair_ano` corrigido para pegar o **último** número de 4 dígitos do texto, não o primeiro (o ano real sempre aparece por último; testado e confirmado com o caso real do "Peugeot 2008" → agora extrai 2017 corretamente). Correções validadas por simulação com os dados reais coletados, mas **ainda não re-testadas contra o site ao vivo** — próximo passo ao retomar o projeto.
 - 2026-08-15: **Fase 2 concluída.** Descoberta importante que corrige o diagnóstico anterior: o bug do "link genérico" (redirecionando pra home) **não era causado por virtualização de scroll ou lazy loading do href** — era um problema de **formatação do CSV**: campos sem aspas (quoting) faziam vírgulas dentro de algum valor (ex: título com vírgula) deslocarem as colunas seguintes, corrompendo a URL lida. Corrigido usando aspas para delimitar os campos no CSV. Em paralelo, o `coletar_anuncios` também foi alinhado ao comportamento do `listar_todos_os_links` (removido o scroll individual por item, que causava vaivém de scroll). Com as duas correções, um novo teste completo confirmou: título, ano, preço e km vêm corretos em 100% dos anúncios (não só nos 3 primeiros), e os links abrem o anúncio certo. Scraper da OLX validado ponta a ponta. Próximo passo: Fase 3 (ETL com pandas).
 - 2026-08-15: Avaliada a integração com a API da FIPE para enriquecer marca/modelo e futuro comparativo de preço. Decisão: adiar para a Fase 11 (já é o lugar natural no roadmap), evitando interromper o momentum atual (Fase 3/4) por uma funcionalidade que só teria valor de uso depois que a interface existir. Detalhes da avaliação de esforço registrados no roadmap.
+- 2026-09-05: **Fase 3 concluída.** Implementados `clean.py` (limpeza de preço/km/ano + extração de marca/modelo do título via heurística de regex, testada com 12 títulos reais incluindo casos difíceis como Peugeot/Citroën/Chevrolet S10), `deduplicate.py` (remove duplicatas por id_externo dentro da mesma leva) e `executar_pipeline.py` (scraper → dedup → limpeza → grava no MySQL, criando histórico de preço automaticamente quando o valor muda). Dois testes reais rodados: primeiro com 40 anúncios (Recife+Jaboatão), 100% com marca identificada; segundo teste com outros 40 anúncios (rotação natural dos anúncios da OLX), também 100% com marca identificada.
+
+- **Anomalia não resolvida (baixo impacto):** no primeiro teste, o anúncio "GWM Haval H6 Premium HEV 2025" (id=10) apareceu no banco com marca="GWM" e modelo="Haval H6" corretos, mesmo "GWM" não estando na lista `MARCAS_CONHECIDAS`. Testado exaustivamente: função isolada devolve `(None, None)` para esse título exato, tanto no ambiente de desenvolvimento quanto no ambiente do usuário; timestamp confirma que veio da mesma execução única (não é resíduo de código antigo); sem inserção manual; sem arquivo `clean.py` duplicado. Print de debug temporário adicionado em `limpar_anuncio()` (ativa só se "GWM" aparecer no título) para flagrar se o problema se repetir no futuro - não removido do código. Caso reapareça, investigar a partir da saída desse debug. Não bloqueia o funcionamento do pipeline (afetou 1 de 80 anúncios processados até agora).
+**Código de debug adicionado em `src/etl/clean.py`, dentro de `limpar_anuncio()`:**
+
+```python
+marca, modelo = extrair_marca_modelo(limpo.get("titulo"))
+
+# DEBUG TEMPORARIO - remover depois de descobrir a causa do caso GWM
+if limpo.get("titulo") and "GWM" in limpo.get("titulo", ""):
+    print(f"[DEBUG] titulo={limpo.get('titulo')!r}")
+    print(f"[DEBUG] marca ANTES (vinda do scraper)={limpo.get('marca')!r}")
+    print(f"[DEBUG] marca extraida agora por extrair_marca_modelo={marca!r}, modelo={modelo!r}")
+
+# So sobrescreve se o scraper nao tiver preenchido isso sozinho
+limpo["marca"] = limpo.get("marca") or marca
+limpo["modelo"] = limpo.get("modelo") or modelo
+
+if limpo.get("titulo") and "GWM" in limpo.get("titulo", ""):
+    print(f"[DEBUG] marca FINAL apos o 'or'={limpo['marca']!r}, modelo FINAL={limpo['modelo']!r}")
+```
+
+Se esse debug disparar no futuro, colar a saída completa numa conversa nova pra retomar a investigação.

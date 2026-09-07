@@ -135,9 +135,19 @@ def limpar_anuncio(anuncio: dict) -> dict:
     limpo = dict(anuncio)
 
     marca, modelo = extrair_marca_modelo(limpo.get("titulo"))
+
+    # DEBUG TEMPORARIO - remover depois de descobrir a causa do caso GWM
+    if limpo.get("titulo") and "GWM" in limpo.get("titulo", ""):
+        print(f"[DEBUG] titulo={limpo.get('titulo')!r}")
+        print(f"[DEBUG] marca ANTES (vinda do scraper)={limpo.get('marca')!r}")
+        print(f"[DEBUG] marca extraida agora por extrair_marca_modelo={marca!r}, modelo={modelo!r}")
+
     # So sobrescreve se o scraper nao tiver preenchido isso sozinho
     limpo["marca"] = limpo.get("marca") or marca
     limpo["modelo"] = limpo.get("modelo") or modelo
+
+    if limpo.get("titulo") and "GWM" in limpo.get("titulo", ""):
+        print(f"[DEBUG] marca FINAL apos o 'or'={limpo['marca']!r}, modelo FINAL={limpo['modelo']!r}")
 
     limpo["preco"] = limpar_preco(limpo.get("preco"))
     limpo["km"] = limpar_km(limpo.get("km"))
