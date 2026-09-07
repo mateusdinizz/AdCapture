@@ -237,11 +237,10 @@ Esse mesmo critério deve ser aplicado quando for modelar `favoritos` e `perfis_
 > 
 > **Decisão: adiado.** Isso já está coberto pela Fase 11 (Score de oportunidades) do roadmap - não desbloqueia nada usável antes da interface existir, e a heurística de regex atual (`extrair_marca_modelo` em `clean.py`) já foi validada com 12 títulos reais, incluindo casos difíceis (Peugeot 2008, Citroën C3, Chevrolet S10). Reavaliar quando chegar na Fase 11.
 
-### Fase 4 — Segunda fonte (Marketplace)
-
-- [ ] Avaliar estratégia de login (conta separada?)
-- [ ] Criar `marketplace_scraper.py`
-- [ ] Integrar ao mesmo pipeline de ETL
+### Fase 4 — Ampliar captura OLX (antes: "Segunda fonte") 
+- [ ] Aumentar `max_anuncios` por região (hoje limitado a 10-20 para testes)
+- [ ] Adicionar mais cidades da região metropolitana do Recife (Olinda, Paulista, Camaragibe) - reaproveitando o mesmo `olx_scraper.py`, só variando a URL de busca
+- [ ] Rodar o pipeline algumas vezes para "engordar" a base antes de conectar à interface
 
 ### Fase 5 — Definir stack de interface ✅
 
@@ -255,33 +254,41 @@ Esse mesmo critério deve ser aplicado quando for modelar `favoritos` e `perfis_
 - [ ] Busca, ordenação e paginação
 - [ ] Testar usabilidade com meu pai
 
-### Fase 7 — Dashboard
+### Fase [Marketplace — condicional, não agendada]
+> **Movida para depois da interface MVP.** Decisão tomada em 2026-09-05 (ver nota abaixo com a análise completa).
+> **Critério objetivo de retomada:** implementar Marketplace quando o volume de carros só da OLX (mesmo após ampliar cidades/quantidade) se mostrar insuficiente **no uso real do meu pai** - não antes disso, por suposição.
+
+- [ ] Avaliar estrategia de login (conta separada?)
+- [ ] Criar `marketplace_scraper.py`
+- [ ] Integrar ao mesmo pipeline de ETL
+
+### Fase 8 — Dashboard
 
 - [ ] Tela inicial com totais (anúncios encontrados, novos hoje, favoritos, oportunidades) e últimos capturados
 
-### Fase 8 — Favoritos
+### Fase 9 — Favoritos
 
 - [ ] Tabela `favoritos` + `usuarios` no banco
 - [ ] Tela de Favoritos na interface
 
-### Fase 9 — Página de detalhes + histórico de preços
+### Fase 10 — Página de detalhes + histórico de preços
 
 - [ ] Modal/página de detalhes do anúncio
 - [ ] Gráfico/lista de histórico de preços (usando a tabela `historico_precos`)
 
-### Fase 10 — Perfil de compra
+### Fase 11 — Perfil de compra
 
 - [ ] Tabela `perfis_compra`
 - [ ] Tela de configuração de critérios de compra
 - [ ] Destacar automaticamente anúncios dentro do perfil
 
-### Fase 11 — Score de oportunidades e alertas (futuro)
+### Fase 12 — Score de oportunidades e alertas (futuro)
 
 - [ ] Sistema de pontuação (🟢 boa oportunidade / 🟡 analisar / 🔴 fora do perfil)
 - [ ] Tabela `oportunidades`
 - [ ] Alertas automáticos de novos anúncios dentro do perfil
 
-### Fase 12 — Automação (futuro)
+### Fase 13 — Automação (futuro)
 
 - [ ] Definir frequência ideal de execução
 - [ ] Implementar agendamento (schedule ou cron)
@@ -294,7 +301,7 @@ Esse mesmo critério deve ser aplicado quando for modelar `favoritos` e `perfis_
 > Espaço livre para registrar decisões técnicas, problemas encontrados e soluções, conforme o projeto avança.
 
 ### 🔖 Onde paramos (retomar por aqui)
-Fase 3 concluída — pipeline scraper→ETL→MySQL funcionando ponta a ponta, com histórico de preço automático. Próximo passo: **Fase 4 — Segunda fonte (Marketplace)**: avaliar estratégia de login (conta separada do pai?), criar `marketplace_scraper.py`, integrar ao mesmo pipeline de ETL.
+Fases 0-3 concluídas (captura OLX, banco, ETL/pipeline - tudo validado e commitado). Decisão estratégica tomada: Marketplace adiado (ver critério de retomada acima). Próximo passo: **ampliar a captura da OLX** (mais cidades, mais anúncios por busca) e depois **iniciar a Fase de Interface (Flask + Jinja2 + Tailwind)** - é a peça que falta pro pai começar a usar o sistema de verdade.
 
 - 2026-08-12: Decisão de simplificar a stack inicial removendo `requests`/`BeautifulSoup4` e `schedule`/`cron` das dependências imediatas, focando primeiro em Selenium + pandas + MySQL.
 - 2026-08-12: Definido que o repositório no GitHub será público (objetivo de portfólio), com licença MIT e `.gitignore` baseado no template Python + complementos manuais. Atenção especial para nunca versionar dados capturados reais ou credenciais.
@@ -334,3 +341,5 @@ if limpo.get("titulo") and "GWM" in limpo.get("titulo", ""):
 ```
 
 Se esse debug disparar no futuro, colar a saída completa numa conversa nova pra retomar a investigação.
+
+- 2026-09-05: **Decisão estratégica: Marketplace adiado para depois da interface MVP.** Análise completa considerou: (1) estrutura já preparada para múltiplas fontes desde a Fase 1 (tabela `fontes` já tinha "Marketplace" cadastrado, `BaseScraper` já define contrato genérico reutilizável, interface já desenhada com badge de fonte no card) - ou seja, adiar não gera retrabalho estrutural; (2) Marketplace estimado em 2-4x o esforço da OLX, por exigir login, ter proteção anti-bot historicamente mais agressiva (Meta/Facebook), e risco real de suspensão de conta (mesmo com conta separada do pai); (3) gargalo real do projeto hoje não é "poucas fontes de dados", é "nenhuma interface" - o pai não consegue ver nenhum dado capturado ainda, de nenhuma fonte; (4) risco identificado no adiamento (OLX sozinha pode não gerar volume suficiente) mitigado com ação de baixo custo: ampliar `max_anuncios` e adicionar mais cidades da região metropolitana na OLX, sem nova integração/risco. Critério objetivo definido para retomar o Marketplace: fazer isso só quando o volume da OLX (ampliada) se mostrar insuficiente no uso real, não por suposição antecipada.
