@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titulo %}AdCapture — Oportunidades Automotivas{% endblock %}</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        input[type="range"] { accent-color: #4F46E5; }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+
+    <header class="sticky top-0 z-50 h-auto lg:h-20 bg-white border-b border-slate-200">
+        <div class="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="min-h-20 flex flex-col lg:flex-row items-center justify-between gap-4 py-4 lg:py-0">
+
+                <div class="flex items-center gap-3 shrink-0">
+                    <div class="relative w-11 h-11 flex items-center justify-center">
+                        <div class="absolute inset-0 rounded-full border-[4px] border-indigo-600"></div>
+                        <i data-lucide="car-front" class="w-5 h-5 text-indigo-600"></i>
+                        <div class="absolute -bottom-1 -left-1 w-4 h-4 border-l-[4px] border-b-[4px] border-indigo-600 rotate-45"></div>
+                    </div>
+                    <div class="text-3xl tracking-tight">
+                        <span class="text-slate-500 font-medium">Ad</span><span class="text-indigo-600 font-extrabold">Capture</span>
+                    </div>
+                </div>
+
+                <!-- Estatisticas reais, vindas do banco (context_processor no app.py) -->
+                <div class="flex items-center gap-3 overflow-x-auto scrollbar-hide w-full lg:w-auto">
+
+                    <div class="min-w-[185px] bg-white border border-slate-200 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-sm">
+                        <div class="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
+                            <i data-lucide="database" class="w-5 h-5 text-indigo-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500">Total Capturado</p>
+                            <p class="text-lg font-bold text-slate-900">{{ stat_total_geral }}</p>
+                        </div>
+                    </div>
+
+                    <div class="min-w-[165px] bg-white border border-slate-200 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-sm">
+                        <div class="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
+                            <i data-lucide="calendar-plus" class="w-5 h-5 text-indigo-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500">Novos Hoje</p>
+                            <p class="text-lg font-bold text-slate-900">{{ stat_novos_hoje }}</p>
+                        </div>
+                    </div>
+
+                    <div class="min-w-[175px] bg-white border border-slate-200 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-sm">
+                        <div class="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+                            <i data-lucide="wallet" class="w-5 h-5 text-emerald-500"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500">Preço Médio</p>
+                            <p class="text-lg font-bold text-slate-900">
+                                {% if stat_preco_medio %}R$ {{ "{:,.0f}".format(stat_preco_medio).replace(",", ".") }}{% else %}—{% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Secao de perfil/login removida - nao existe sistema de
+                     usuarios ainda; mostrar um avatar falso seria enganoso. -->
+
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-[1700px] mx-auto flex">
+        {% block conteudo %}{% endblock %}
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function updateKm(value) {
+            const el = document.getElementById('kmValue');
+            if (Number(value) >= 300000) {
+                el.textContent = 'Sem limite';
+            } else {
+                el.textContent = `${Number(value).toLocaleString('pt-BR')} km`;
+            }
+        }
+
+        function toggleFilters() {
+            const sidebar = document.getElementById('filterSidebar');
+            const overlay = document.getElementById('filterOverlay');
+            sidebar.classList.toggle('hidden');
+            sidebar.classList.toggle('fixed');
+            sidebar.classList.toggle('left-0');
+            sidebar.classList.toggle('top-0');
+            sidebar.classList.toggle('z-50');
+            sidebar.classList.toggle('h-full');
+            sidebar.classList.toggle('shadow-2xl');
+            overlay.classList.toggle('hidden');
+        }
+    </script>
+
+</body>
+</html>

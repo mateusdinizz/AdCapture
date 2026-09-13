@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block conteudo %}
+
+<div class="lg:hidden fixed bottom-5 right-5 z-40">
+    <button onclick="toggleFilters()"
+            class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl shadow-lg font-medium">
+        <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
+        Filtros
+    </button>
+</div>
+
+<aside id="filterSidebar" class="hidden lg:block w-64 shrink-0 bg-white border-r border-slate-200 p-4 min-h-[calc(100vh-80px)]">
+    <form method="get">
+        <div class="flex items-center gap-2 mb-6">
+            <i data-lucide="sliders-horizontal" class="w-5 h-5 text-slate-600"></i>
+            <h2 class="text-sm font-semibold text-slate-800">FILTROS</h2>
+        </div>
+
+        <div class="mb-6">
+            <p class="text-xs font-semibold text-slate-500 uppercase mb-3">Marca e Modelo</p>
+
+            <label class="block text-xs text-slate-600 mb-1.5" for="marca">Marca</label>
+            <select id="marca" name="marca" class="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">Todas as marcas</option>
+                {% for m in marcas_disponiveis %}
+                <option value="{{ m }}" {% if filtros.marca == m %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+            </select>
+
+            <!-- Simplificacao: campo de texto livre em vez de select em
+                 cascata (Marca -> Modelo), que exigiria uma consulta
+                 extra via JS/AJAX a cada marca escolhida. -->
+            <label class="block text-xs text-slate-600 mb-1.5 mt-4" for="modelo">Modelo (busca livre)</label>
+            <input type="text" id="modelo" name="modelo" value="{{ filtros.modelo }}" placeholder="ex: Corolla, HB20..."
+                   class="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <div class="mb-6">
+            <p class="text-xs font-semibold text-slate-500 uppercase mb-3">Faixa de Preço</p>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-slate-600 mb-1.5">Mínimo</label>
+                    <input type="number" name="preco_min" value="{{ filtros.preco_min }}" placeholder="R$ 0"
+                           class="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-600 mb-1.5">Máximo</label>
+                    <input type="number" name="preco_max" value="{{ filtros.preco_max }}" placeholder="R$ 200.000"
+                           class="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <p class="text-xs font-semibold text-slate-500 uppercase mb-3">Ano do Veículo</p>
+            <!-- Campos numericos livres em vez de lista fixa de anos -
+                 a lista fixa nao cobriria anos fora do intervalo comum
+                 (ja vimos anuncios de 1988 e ate 2027 nos dados reais). -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-slate-600 mb-1.5">De</label>
+                    <input type="number" name="ano_min" value="{{ filtros.ano_min }}" placeholder="2015"
+                           class="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-600 mb-1.5">Até</label>
+                    <input type="number" name="ano_max" value="{{ filtros.ano_max }}" placeholder="2025"
+                           class="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <p class="text-xs font-semibold text-slate-500 uppercase mb-3">Quilometragem</p>
+            <label class="text-xs text-slate-600">Máximo de KM</label>
+            <div class="flex justify-between text-xs text-slate-500 mt-1 mb-3">
+                <span>0 km</span>
+                <span id="kmValue">
+                    {% if filtros.km_max|int >= 300000 %}Sem limite{% else %}{{ "{:,.0f}".format(filtros.km_max|int).replace(",", ".") }} km{% endif %}
+                </span>
+            </div>
+            <input id="kmRange" type="range" name="km_max" min="0" max="300000" step="5000"
+                   value="{{ filtros.km_max }}" class="w-full" oninput="updateKm(this.value)">
+        </div>
+
+        <div class="mb-6 pt-5 border-t border-slate-200">
+            <p class="text-xs font-semibold text-slate-500 uppercase mb-4">Origem / Fonte</p>
+
+            <label class="flex items-center gap-3 mb-4">
+                <input type="checkbox" checked disabled class="w-4 h-4 rounded border-slate-300 text-indigo-600">
+                <span class="w-8 h-6 flex items-center justify-center rounded-md bg-orange-500 text-white text-[10px] font-bold">OLX</span>
+                <span class="text-sm text-slate-600">OLX</span>
+            </label>
+
+            <!-- Marketplace adiado (ver decisao no .md) - visivel mas
+                 desabilitado, sinalizando "em breve" -->
+            <label class="flex items-center gap-3 opacity-50 cursor-not-allowed">
+                <input type="checkbox" disabled class="w-4 h-4 rounded border-slate-300">
+                <span class="w-8 h-6 flex items-center justify-center rounded-md bg-blue-600 text-white text-sm font-bold">f</span>
+                <span class="text-sm text-slate-600">Marketplace (em breve)</span>
+            </label>
+        </div>
+
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 font-medium transition flex items-center justify-center gap-2">
+            <i data-lucide="list-filter" class="w-4 h-4"></i>
+            Aplicar Filtros
+        </button>
+        <a href="/" class="block text-center text-sm text-slate-400 hover:text-slate-700 mt-2 py-1">Limpar tudo</a>
+    </form>
+</aside>
+
+<div id="filterOverlay" onclick="toggleFilters()" class="hidden fixed inset-0 bg-black/30 z-40 lg:hidden"></div>
+
+<main class="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
+
+    <form method="get" class="flex flex-col xl:flex-row gap-3 mb-6">
+        <!-- Campos ja escolhidos na sidebar precisam ser preservados
+             quando esse form (busca + ordenar) for enviado separado -->
+        <input type="hidden" name="marca" value="{{ filtros.marca }}">
+        <input type="hidden" name="modelo" value="{{ filtros.modelo }}">
+        <input type="hidden" name="preco_min" value="{{ filtros.preco_min }}">
+        <input type="hidden" name="preco_max" value="{{ filtros.preco_max }}">
+        <input type="hidden" name="ano_min" value="{{ filtros.ano_min }}">
+        <input type="hidden" name="ano_max" value="{{ filtros.ano_max }}">
+        <input type="hidden" name="km_max" value="{{ filtros.km_max }}">
+
+        <div class="relative flex-1">
+            <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i>
+            <input type="text" name="busca" value="{{ filtros.busca }}"
+                   placeholder="Buscar por marca, modelo, cidade, etc..."
+                   class="w-full bg-white border border-slate-200 rounded-xl pl-11 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <div class="relative w-full xl:w-64">
+            <i data-lucide="arrow-down-up" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
+            <select name="ordenar" onchange="this.form.submit()"
+                    class="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-10 py-3 text-sm appearance-none outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="recentes" {% if filtros.ordenar == "recentes" %}selected{% endif %}>Mais recentes</option>
+                <option value="preco_asc" {% if filtros.ordenar == "preco_asc" %}selected{% endif %}>Menor preço</option>
+                <option value="preco_desc" {% if filtros.ordenar == "preco_desc" %}selected{% endif %}>Maior preço</option>
+                <option value="km_asc" {% if filtros.ordenar == "km_asc" %}selected{% endif %}>Menor quilometragem</option>
+                <option value="ano_desc" {% if filtros.ordenar == "ano_desc" %}selected{% endif %}>Ano mais novo</option>
+            </select>
+            <i data-lucide="chevron-down" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none"></i>
+        </div>
+
+        <div class="hidden xl:flex items-center justify-end min-w-[130px]">
+            <span class="text-sm text-slate-500">Resultados:</span>
+            <span class="text-sm font-semibold text-slate-900 ml-1">{{ total_filtrado }}</span>
+        </div>
+    </form>
+
+    {% if anuncios %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for a in anuncios %}
+        <article class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col">
+
+            <!-- Sem fotos reais capturadas ainda (backlog) - usamos um
+                 placeholder neutro em vez de foto generica de banco de
+                 imagem, para nao sugerir que e a foto real do carro. -->
+            <div class="relative aspect-[16/9] bg-slate-100 flex items-center justify-center">
+                <i data-lucide="image-off" class="w-8 h-8 text-slate-300"></i>
+
+                <span class="absolute top-3 left-3 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow
+                             {% if a.fonte_nome == 'OLX' %}bg-orange-500{% else %}bg-blue-600{% endif %}">
+                    {{ a.fonte_nome }}
+                </span>
+            </div>
+
+            <div class="p-4 flex flex-col flex-1">
+                <h3 class="font-semibold text-slate-900 leading-6 line-clamp-2">{{ a.titulo }}</h3>
+
+                <div class="flex items-baseline gap-2 mt-3">
+                    <span class="text-2xl font-bold text-slate-900">
+                        {% if a.preco %}R$ {{ "{:,.0f}".format(a.preco).replace(",", ".") }}{% else %}Sob consulta{% endif %}
+                    </span>
+                </div>
+
+                <div class="flex flex-wrap gap-2 mt-4">
+                    <span class="px-3 py-1.5 rounded-lg bg-slate-50 text-xs text-slate-600 flex items-center gap-1.5">
+                        <i data-lucide="calendar" class="w-3.5 h-3.5"></i>{{ a.ano or "—" }}
+                    </span>
+                    <span class="px-3 py-1.5 rounded-lg bg-slate-50 text-xs text-slate-600 flex items-center gap-1.5">
+                        <i data-lucide="gauge" class="w-3.5 h-3.5"></i>
+                        {% if a.km %}{{ "{:,.0f}".format(a.km).replace(",", ".") }} km{% else %}—{% endif %}
+                    </span>
+                    <span class="px-3 py-1.5 rounded-lg bg-slate-50 text-xs text-slate-600 flex items-center gap-1.5">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>{{ a.cidade or "—" }}
+                    </span>
+                </div>
+
+                <div class="flex gap-2 mt-5">
+                    <a href="{{ a.url }}" target="_blank"
+                       class="bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-medium flex-1 text-center transition">
+                        Ver Anúncio
+                    </a>
+                    {% if a.whatsapp_link %}
+                    <a href="{{ a.whatsapp_link }}" target="_blank"
+                       class="w-11 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition"
+                       aria-label="WhatsApp">
+                        <i data-lucide="message-circle" class="w-5 h-5"></i>
+                    </a>
+                    {% endif %}
+                    <!-- Botao de favoritar oculto - Fase 8, ainda nao implementada -->
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-20 text-slate-400">
+        <p class="text-xl font-semibold text-slate-600">Nenhum anúncio encontrado</p>
+        <p class="text-sm mt-1">Tente ajustar ou limpar os filtros.</p>
+    </div>
+    {% endif %}
+</main>
+
+{% endblock %}
