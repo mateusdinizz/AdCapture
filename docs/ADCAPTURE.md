@@ -249,10 +249,10 @@ Esse mesmo critério deve ser aplicado quando for modelar `favoritos` e `perfis_
 
 ### Fase 6 — MVP de Interface (Anúncios + Filtros)
 
-- [ ] Tela de Anúncios com cards (foto, marca/modelo, ano, preço, km, cidade, fonte, data captura, link, favoritar)
-- [ ] Barra lateral de filtros (marca, modelo, faixa de preço, faixa de ano, faixa de km, cidade/estado, fonte, tipo de vendedor, data)
-- [ ] Busca, ordenação e paginação
-- [ ] Testar usabilidade com meu pai
+- [x] Tela de Anúncios com cards (foto, marca/modelo, ano, preço, km, cidade, fonte, data captura, link, favoritar)
+- [x] Barra lateral de filtros (marca, modelo, faixa de preço, faixa de ano, faixa de km, cidade/estado, fonte, tipo de vendedor, data)
+- [x] Busca, ordenação e paginação
+- [x] Testar usabilidade com meu pai
 
 ### Fase [Marketplace — condicional, não agendada]
 > **Movida para depois da interface MVP.** Decisão tomada em 2026-09-05 (ver nota abaixo com a análise completa).
@@ -264,7 +264,7 @@ Esse mesmo critério deve ser aplicado quando for modelar `favoritos` e `perfis_
 
 ### Fase 8 — Dashboard
 
-- [ ] Tela inicial com totais (anúncios encontrados, novos hoje, favoritos, oportunidades) e últimos capturados
+- [x] Tela inicial com totais (anúncios encontrados, novos hoje, favoritos, oportunidades) e últimos capturados
 
 ### Fase 9 — Favoritos
 
@@ -301,7 +301,7 @@ Esse mesmo critério deve ser aplicado quando for modelar `favoritos` e `perfis_
 > Espaço livre para registrar decisões técnicas, problemas encontrados e soluções, conforme o projeto avança.
 
 ### 🔖 Onde paramos (retomar por aqui)
-Fases 0-3 concluídas (captura OLX, banco, ETL/pipeline - tudo validado e commitado). Decisão estratégica tomada: Marketplace adiado (ver critério de retomada acima). Próximo passo: **ampliar a captura da OLX** (mais cidades, mais anúncios por busca) e depois **iniciar a Fase de Interface (Flask + Jinja2 + Tailwind)** - é a peça que falta pro pai começar a usar o sistema de verdade.
+Fases 0-7 concluídas e commitadas — captura OLX (4 cidades), banco, ETL/pipeline, interface web (Anúncios + Filtros + Dashboard) funcionando ponta a ponta com dados reais. Próximo passo: **Fase 8 — Favoritos** (tabela `favoritos` + `usuarios` no banco, tela de Favoritos na interface).
 
 - 2026-08-12: Decisão de simplificar a stack inicial removendo `requests`/`BeautifulSoup4` e `schedule`/`cron` das dependências imediatas, focando primeiro em Selenium + pandas + MySQL.
 - 2026-08-12: Definido que o repositório no GitHub será público (objetivo de portfólio), com licença MIT e `.gitignore` baseado no template Python + complementos manuais. Atenção especial para nunca versionar dados capturados reais ou credenciais.
@@ -343,3 +343,6 @@ if limpo.get("titulo") and "GWM" in limpo.get("titulo", ""):
 Se esse debug disparar no futuro, colar a saída completa numa conversa nova pra retomar a investigação.
 
 - 2026-09-05: **Decisão estratégica: Marketplace adiado para depois da interface MVP.** Análise completa considerou: (1) estrutura já preparada para múltiplas fontes desde a Fase 1 (tabela `fontes` já tinha "Marketplace" cadastrado, `BaseScraper` já define contrato genérico reutilizável, interface já desenhada com badge de fonte no card) - ou seja, adiar não gera retrabalho estrutural; (2) Marketplace estimado em 2-4x o esforço da OLX, por exigir login, ter proteção anti-bot historicamente mais agressiva (Meta/Facebook), e risco real de suspensão de conta (mesmo com conta separada do pai); (3) gargalo real do projeto hoje não é "poucas fontes de dados", é "nenhuma interface" - o pai não consegue ver nenhum dado capturado ainda, de nenhuma fonte; (4) risco identificado no adiamento (OLX sozinha pode não gerar volume suficiente) mitigado com ação de baixo custo: ampliar `max_anuncios` e adicionar mais cidades da região metropolitana na OLX, sem nova integração/risco. Critério objetivo definido para retomar o Marketplace: fazer isso só quando o volume da OLX (ampliada) se mostrar insuficiente no uso real, não por suposição antecipada.
+- 2026-09-10: **Fase 6 concluída.** Interface web construída com Flask + Jinja2, adaptando um template visual (estilo indigo/slate, fornecido pelo usuário) para consumir dados reais do banco via SQLAlchemy. Decisões tomadas: badge/preço FIPE removido (sem integração ainda), botão de favoritar oculto (Fase 8 pendente), checkbox Marketplace visível mas desabilitado ("em breve"), campo Modelo virou busca de texto livre (em vez de select em cascata), campos de Ano viraram numéricos livres (lista fixa não cobria todo o intervalo real de anos nos dados), fotos substituídas por ícone neutro (sem captura de imagem implementada ainda - fica como gap conhecido/backlog). Estatísticas do cabeçalho (total, novos hoje, preço médio) implementadas via `context_processor` do Flask, reutilizável em qualquer página futura sem duplicar código.
+- 2026-09-10: **Bug encontrado e corrigido:** o slider de quilometragem tinha um teto padrão de 200.000 km (herdado do template original) que filtrava anúncios silenciosamente mesmo sem o usuário mexer no controle (usuário viu 177 de 181 anúncios sem aplicar filtro nenhum). Corrigido tratando o valor máximo do slider (agora 300.000) como "sem limite" — não aplica filtro nenhum nesse caso, em vez de um teto escondido. Lição: controles de UI com valor padrão sempre preenchido (sliders, principalmente) podem filtrar dados sem o usuário perceber; vale sempre ter um estado explícito de "sem filtro" em vez de confiar só no valor máximo do controle.
+- 2026-09-10: **Fase 7 concluída.** Rota `/dashboard` criada reaproveitando o `context_processor` já existente. Testado incluindo caso de banco vazio (proteção contra divisão por zero no cálculo do gráfico de barras).

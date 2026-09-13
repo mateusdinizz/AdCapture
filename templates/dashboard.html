@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block titulo %}Dashboard · AdCapture{% endblock %}
+
+{% block conteudo %}
+<main class="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 w-full">
+
+    <h1 class="text-xl font-bold text-slate-900 mb-6">Visão geral</h1>
+
+    <!-- Cartoes -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+                    <i data-lucide="database" class="w-5 h-5 text-indigo-600"></i>
+                </div>
+                <p class="text-sm text-slate-500">Total Capturado</p>
+            </div>
+            <p class="text-3xl font-bold text-slate-900 mt-3">{{ stat_total_geral }}</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+                    <i data-lucide="calendar-plus" class="w-5 h-5 text-indigo-600"></i>
+                </div>
+                <p class="text-sm text-slate-500">Novos Hoje</p>
+            </div>
+            <p class="text-3xl font-bold text-slate-900 mt-3">{{ stat_novos_hoje }}</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
+                    <i data-lucide="award" class="w-5 h-5 text-amber-500"></i>
+                </div>
+                <p class="text-sm text-slate-500">Marca Mais Comum</p>
+            </div>
+            <p class="text-3xl font-bold text-slate-900 mt-3">{{ marca_mais_comum or "—" }}</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <i data-lucide="map-pin" class="w-5 h-5 text-emerald-500"></i>
+                </div>
+                <p class="text-sm text-slate-500">Cidade com Mais Anúncios</p>
+            </div>
+            <p class="text-3xl font-bold text-slate-900 mt-3">{{ cidade_mais_comum or "—" }}</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Grafico de distribuicao por marca -->
+        <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+            <h2 class="text-sm font-semibold text-slate-800 uppercase mb-5">Distribuição por marca</h2>
+
+            {% if grafico_marcas %}
+            <div class="space-y-3">
+                {% for item in grafico_marcas %}
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-medium text-slate-700">{{ item.marca }}</span>
+                        <span class="text-slate-400">{{ item.total }}</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2.5">
+                        <div class="bg-indigo-600 h-2.5 rounded-full" style="width: {{ item.percentual }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-slate-400">Nenhum dado disponível ainda.</p>
+            {% endif %}
+        </div>
+
+        <!-- Ultimos capturados -->
+        <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+            <h2 class="text-sm font-semibold text-slate-800 uppercase mb-5">Últimos capturados</h2>
+
+            {% if ultimos %}
+            <div class="divide-y divide-slate-100">
+                {% for a in ultimos %}
+                <a href="{{ a.url }}" target="_blank" class="flex items-center justify-between py-3 hover:bg-slate-50 -mx-2 px-2 rounded-lg transition">
+                    <div class="min-w-0">
+                        <p class="text-sm font-medium text-slate-800 truncate">{{ a.titulo }}</p>
+                        <p class="text-xs text-slate-400">{{ a.cidade or "—" }} · {{ a.fonte_nome }}</p>
+                    </div>
+                    <span class="text-sm font-semibold text-slate-900 shrink-0 ml-3">
+                        {% if a.preco %}R$ {{ "{:,.0f}".format(a.preco).replace(",", ".") }}{% else %}—{% endif %}
+                    </span>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-slate-400">Nenhum anúncio capturado ainda.</p>
+            {% endif %}
+        </div>
+    </div>
+
+</main>
+{% endblock %}

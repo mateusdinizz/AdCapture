@@ -10,7 +10,7 @@ Depois abra http://127.0.0.1:5000 no navegador.
 from datetime import date
 
 from flask import Flask, render_template, request
-from sqlalchemy import func
+from sqlalchemy import func, desc
 
 from src.database.connection import get_session
 from src.database.models import Anuncio
@@ -156,6 +156,74 @@ def anuncios():
         marcas_disponiveis=marcas_disponiveis,
         cidades_disponiveis=cidades_disponiveis,
         filtros=filtros_atuais,
+    )
+
+
+@app.route("/dashboard")
+def dashboard():
+    """
+    Fase 7 do roadmap: visao geral do sistema.
+
+    Os cartoes de "Favoritos" e "Oportunidades" da visao original da
+    interface foram substituidos por "Marca mais comum" e "Cidade com
+    mais anuncios" - dados que ja temos de verdade hoje, ate que
+    Favoritos (Fase 8) e Score de oportunidades (Fase 11) existam.
+    """
+    with get_session() as session:
+        distribuicao_marca = (
+            session.query(Anuncio.marca, func.count(Anuncio.id).label("total"))
+            .filter(Anuncio.ativo.is_(True), Anuncio.marca.isnot(None))
+            .group_by(Anuncio.marca)
+            .order_by(desc("total"))
+            .limit(8)
+            .all()
+        )
+        marca_mais_comum = distribuicao_marca[0][0] if distribuicao_marca else None
+
+        cidade_top = (
+            session.query(Anuncio.cidade, func.count(Anuncio.id).label("total"))
+            .filter(Anuncio.ativo.is_(True), Anuncio.cidade.isnot(None))
+            .group_by(Anuncio.cidade)
+            .order_by(desc("total"))
+            .limit(1)
+            .first()
+        )
+        cidade_mais_comum = cidade_top[0] if cidade_top else None
+
+        ultimos = (
+            session.query(Anuncio)
+            .filter(Anuncio.ativo.is_(True))
+            .order_by(Anuncio.data_captura.desc())
+            .limit(8)
+            .all()
+        )
+
+        ultimos_dados = [
+            {
+                "titulo": a.titulo,
+                "preco": float(a.preco) if a.preco is not None else None,
+                "cidade": a.cidade,
+                "fonte_nome": a.fonte.nome if a.fonte else "Desconhecida",
+                "url": a.url,
+                "data_captura": a.data_captura,
+            }
+            for a in ultimos
+        ]
+
+        # Grafico de barras: percentual relativo a marca com MAIS anuncios
+        # (a barra do topo sempre fica em 100%, as outras proporcionais).
+        maior_total = distribuicao_marca[0][1] if distribuicao_marca else 1
+        grafico_marcas = [
+            {"marca": m, "total": t, "percentual": round((t / maior_total) * 100)}
+            for m, t in distribuicao_marca
+        ]
+
+    return render_template(
+        "dashboard.html",
+        marca_mais_comum=marca_mais_comum,
+        cidade_mais_comum=cidade_mais_comum,
+        ultimos=ultimos_dados,
+        grafico_marcas=grafico_marcas,
     )
 
 
