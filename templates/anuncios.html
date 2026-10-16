@@ -202,7 +202,18 @@
                         <i data-lucide="message-circle" class="w-5 h-5"></i>
                     </a>
                     {% endif %}
-                    <!-- Botao de favoritar oculto - Fase 8, ainda nao implementada -->
+                    <button onclick="toggleFavorito({{ a.id }}, this)" type="button"
+                            class="w-11 rounded-xl flex items-center justify-center transition
+                                   {% if a.favoritado %}bg-red-50 text-red-500 hover:bg-red-100
+                                   {% else %}bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-red-400{% endif %}"
+                            aria-label="Favoritar"
+                            data-favoritado="{{ 'true' if a.favoritado else 'false' }}">
+                        {% if a.favoritado %}
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.501 5.501 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                        {% else %}
+                        <i data-lucide="heart" class="w-5 h-5"></i>
+                        {% endif %}
+                    </button>
                 </div>
             </div>
         </article>

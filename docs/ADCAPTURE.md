@@ -264,11 +264,14 @@ Só vale criar tabela filha quando a relação é genuinamente **1-para-muitos**
 - [ ] Criar `marketplace_scraper.py`
 - [ ] Integrar ao mesmo pipeline de ETL
 
-### Fase 8 — Favoritos
+### Fase 8 — Favoritos ✅
 > **Escopo simplificado em 2026-09-11:** sem tabela `usuarios` nem login — ferramenta de uso pessoal/familiar, lista de favoritos compartilhada. Revisitar essa decisão só se um dia for necessário multiusuário de verdade.
-- [ ] Tabela `favoritos` (id, anuncio_id, data_criacao) — sem `usuario_id`
-- [ ] Botão de favoritar funcional nos cards (hoje está oculto)
-- [ ] Tela de Favoritos na interface
+- [x] Tabela `favoritos` (id, anuncio_id, data_criacao) — sem `usuario_id`
+- [x] Botão de favoritar funcional nos cards (coracao toggle, sem reload)
+- [x] Tela de Favoritos na interface
+- [x] API JSON (POST/DELETE) para favoritar/desfavoritar via fetch
+- [x] Badge de contagem de favoritos no header (atualiza dinamicamente)
+- [x] Na pagina de favoritos, desfavoritar remove o card com animacao
 
 ### Fase 9 — Página de detalhes + histórico de preços
 - [ ] Modal/página de detalhes do anúncio
@@ -297,7 +300,7 @@ Só vale criar tabela filha quando a relação é genuinamente **1-para-muitos**
 > Espaço livre para registrar decisões técnicas, problemas encontrados e soluções, conforme o projeto avança.
 
 ### 🔖 Onde paramos (retomar por aqui)
-Fases 0-7 concluídas e commitadas — captura OLX (4 cidades), banco, ETL/pipeline, interface web (Anúncios + Filtros + Dashboard) funcionando ponta a ponta com dados reais. Numeração do roadmap corrigida (Dashboard = Fase 7, oficialmente). Próximo passo: **Fase 8 — Favoritos**, com escopo simplificado (sem login/usuários).
+Fases 0-8 concluídas — captura OLX (4 cidades), banco, ETL/pipeline, interface web (Anúncios + Filtros + Dashboard + Favoritos) funcionando ponta a ponta com dados reais. Próximo passo: **Fase 9 — Página de detalhes + histórico de preços**.
 
 - 2026-08-12: Decisão de simplificar a stack inicial removendo `requests`/`BeautifulSoup4` e `schedule`/`cron` das dependências imediatas, focando primeiro em Selenium + pandas + MySQL.
 - 2026-08-12: Definido que o repositório no GitHub será público (objetivo de portfólio), com licença MIT e `.gitignore` baseado no template Python + complementos manuais.
@@ -336,3 +339,4 @@ Fases 0-7 concluídas e commitadas — captura OLX (4 cidades), banco, ETL/pipel
 - 2026-09-10: **Bug encontrado e corrigido:** slider de km com teto padrão de 200.000 km escondia anúncios silenciosamente mesmo sem filtro aplicado pelo usuário (usuário viu 177 de 181 anúncios). Corrigido tratando o valor máximo do slider (agora 300.000) como "sem limite" explícito. Lição: controles de UI com valor padrão sempre preenchido podem filtrar dados sem o usuário perceber.
 - 2026-09-10: **Fase 7 concluída.** Rota `/dashboard` criada reaproveitando o `context_processor`. Testado incluindo caso de banco vazio (proteção contra divisão por zero no gráfico de barras).
 - 2026-09-11: **Auditoria do arquivo de contexto.** Corrigidas inconsistências: numeração do roadmap alinhada (Dashboard oficialmente Fase 7, Marketplace sem número fixo por ser condicional); item "Camaragibe" da Fase 4 estava marcado como feito sem ter sido implementado — corrigido para pendência aberta; item "testado com meu pai" da Fase 6 separado em dois (teste técnico meu ✅, uso real do pai ainda pendente); estrutura do repositório atualizada para refletir `app.py`/`templates/`; backlog de captura de imagens explicitado na Fase 2. **Decisão adicional:** Favoritos (Fase 8) e Perfil de compra (Fase 10) simplificados para não exigir tabela `usuarios`/login — ferramenta de uso pessoal/familiar, sem necessidade de multiusuário real por enquanto; revisitar só se isso mudar.
+- 2026-10-16: **Fase 8 concluída.** Tabela `favoritos` criada (`sql/favoritos.sql`), modelo `Favorito` adicionado ao SQLAlchemy com relationship 1-para-1 via `uselist=False`. API REST em `/api/favoritos/<id>` (POST para favoritar, DELETE para desfavoritar) + `/api/favoritos/count` (para badge dinâmico). Botão de coração ativado nos cards de anúncios (antes estava oculto) — toggle visual sem reload via `fetch()`, alternando entre coração vazio (Lucide) e preenchido (SVG inline). Tela `/favoritos` criada com mesma aparência dos cards + empty state com CTA. Na página de favoritos, desfavoritar anima a saída do card (opacity + scale). Badge de contagem no nav se atualiza dinamicamente via JS após cada toggle. Proteção contra favoritar anúncio inexistente (404 em vez de 500).

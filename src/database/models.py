@@ -87,6 +87,9 @@ class Anuncio(Base):
     imagens = relationship(
         "Imagem", back_populates="anuncio", cascade="all, delete-orphan"
     )
+    favorito = relationship(
+        "Favorito", back_populates="anuncio", uselist=False, cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Anuncio {self.titulo} - R${self.preco}>"
@@ -118,3 +121,23 @@ class Imagem(Base):
 
     def __repr__(self):
         return f"<Imagem anuncio_id={self.anuncio_id}>"
+
+
+class Favorito(Base):
+    """
+    Fase 8: favoritos sem sistema de usuarios.
+    Cada anuncio pode ser favoritado no maximo uma vez (UNIQUE no banco).
+    """
+    __tablename__ = "favoritos"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    anuncio_id = Column(
+        Integer, ForeignKey("anuncios.id", ondelete="CASCADE"),
+        nullable=False, unique=True,
+    )
+    data_criacao = Column(TIMESTAMP, default=datetime.utcnow)
+
+    anuncio = relationship("Anuncio", back_populates="favorito")
+
+    def __repr__(self):
+        return f"<Favorito anuncio_id={self.anuncio_id}>"

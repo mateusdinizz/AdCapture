@@ -51,6 +51,16 @@
                                                      {% if request.path == '/dashboard' %}bg-indigo-50 text-indigo-600{% else %}text-slate-500 hover:text-slate-800{% endif %}">
                             Dashboard
                         </a>
+                        <a href="/favoritos" class="px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5
+                                                     {% if request.path == '/favoritos' %}bg-indigo-50 text-indigo-600{% else %}text-slate-500 hover:text-slate-800{% endif %}">
+                            <i data-lucide="heart" class="w-4 h-4"></i>
+                            Favoritos
+                            {% if stat_total_favoritos %}
+                            <span id="favBadge" class="bg-indigo-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">{{ stat_total_favoritos }}</span>
+                            {% else %}
+                            <span id="favBadge" class="hidden bg-indigo-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none"></span>
+                            {% endif %}
+                        </a>
                     </nav>
                 </div>
 
@@ -104,6 +114,69 @@
 
     <script>
         lucide.createIcons();
+
+        /**
+         * Fase 8: favoritar/desfavoritar via API sem recarregar a pagina.
+         * Alterna visualmente o botao (coracao vazio ↔ preenchido) e
+         * atualiza o badge de favoritos no header.
+         */
+        async function toggleFavorito(anuncioId, btn) {
+            const favoritado = btn.dataset.favoritado === 'true';
+            const method = favoritado ? 'DELETE' : 'POST';
+
+            try {
+                const resp = await fetch(`/api/favoritos/${anuncioId}`, { method });
+                const data = await resp.json();
+
+                btn.dataset.favoritado = String(data.favoritado);
+
+                if (data.favoritado) {
+                    btn.className = 'w-11 rounded-xl flex items-center justify-center transition bg-red-50 text-red-500 hover:bg-red-100';
+                    btn.innerHTML = '<svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.501 5.501 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+                } else {
+                    btn.className = 'w-11 rounded-xl flex items-center justify-center transition bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-red-400';
+                    btn.innerHTML = '<i data-lucide="heart" class="w-5 h-5"></i>';
+                    lucide.createIcons();
+
+                    // Se estamos na pagina de favoritos, remover o card inteiro
+                    if (window.location.pathname === '/favoritos') {
+                        const card = btn.closest('article');
+                        if (card) {
+                            card.style.transition = 'opacity 0.3s, transform 0.3s';
+                            card.style.opacity = '0';
+                            card.style.transform = 'scale(0.95)';
+                            setTimeout(() => {
+                                card.remove();
+                                // Atualizar contador na pagina de favoritos
+                                const counter = document.getElementById('favCounter');
+                                if (counter) {
+                                    const n = document.querySelectorAll('.fav-card').length;
+                                    counter.textContent = n;
+                                    if (n === 0) location.reload();
+                                }
+                            }, 300);
+                        }
+                    }
+                }
+
+                // Atualizar badge no header (recarrega o contador do servidor)
+                const badgeResp = await fetch('/api/favoritos/count');
+                if (badgeResp.ok) {
+                    const badgeData = await badgeResp.json();
+                    const badge = document.getElementById('favBadge');
+                    if (badge) {
+                        if (badgeData.total > 0) {
+                            badge.textContent = badgeData.total;
+                            badge.classList.remove('hidden');
+                        } else {
+                            badge.classList.add('hidden');
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Erro ao favoritar/desfavoritar:', err);
+            }
+        }
 
         function updateKm(value) {
             const el = document.getElementById('kmValue');

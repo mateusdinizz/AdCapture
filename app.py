@@ -1,5 +1,9 @@
 """
-Aplicacao Flask - Fase 6 do roadmap: tela de Anuncios + Filtros.
+Aplicacao Flask — Fases 6-8 do roadmap.
+
+Fase 6: tela de Anuncios + Filtros
+Fase 7: Dashboard
+Fase 8: Favoritos (sem login/usuarios)
 
 Como rodar:
     python app.py
@@ -9,11 +13,11 @@ Depois abra http://127.0.0.1:5000 no navegador.
 
 from datetime import date
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from sqlalchemy import func, desc
 
 from src.database.connection import get_session
-from src.database.models import Anuncio
+from src.database.models import Anuncio, Favorito
 
 app = Flask(__name__)
 
@@ -24,9 +28,9 @@ KM_MAX_SLIDER = 300000  # quando o slider estiver nesse valor, tratamos como "se
 def injetar_estatisticas():
     """
     Deixa as estatisticas do cabecalho (total capturado, novos hoje,
-    preco medio) disponiveis automaticamente em QUALQUER template,
-    sem precisar passar isso manualmente em cada rota nova que a
-    interface for ganhando (dashboard, favoritos, etc.).
+    preco medio, total de favoritos) disponiveis automaticamente em
+    QUALQUER template, sem precisar passar isso manualmente em cada
+    rota nova que a interface for ganhando.
     """
     with get_session() as session:
         total_geral = session.query(Anuncio).filter(Anuncio.ativo.is_(True)).count()
@@ -44,10 +48,13 @@ def injetar_estatisticas():
             .scalar()
         )
 
+        total_favoritos = session.query(Favorito).count()
+
     return {
         "stat_total_geral": total_geral,
         "stat_novos_hoje": novos_hoje,
         "stat_preco_medio": float(preco_medio) if preco_medio else None,
+        "stat_total_favoritos": total_favoritos,
     }
 
 
@@ -118,6 +125,13 @@ def anuncios():
 
         total_filtrado = query.count()
 
+        # IDs dos anuncios favoritados, para saber quais coracoes
+        # devem aparecer preenchidos na tela
+        ids_favoritados = {
+            f.anuncio_id
+            for f in session.query(Favorito.anuncio_id).all()
+        }
+
         anuncios_dados = [
             {
                 "id": a.id,
@@ -132,6 +146,7 @@ def anuncios():
                 "url": a.url,
                 "whatsapp_link": a.whatsapp_link,
                 "fonte_nome": a.fonte.nome if a.fonte else "Desconhecida",
+                "favoritado": a.id in ids_favoritados,
             }
             for a in resultados
         ]
@@ -167,7 +182,8 @@ def dashboard():
     Os cartoes de "Favoritos" e "Oportunidades" da visao original da
     interface foram substituidos por "Marca mais comum" e "Cidade com
     mais anuncios" - dados que ja temos de verdade hoje, ate que
-    Favoritos (Fase 8) e Score de oportunidades (Fase 11) existam.
+    Score de oportunidades (Fase 11) exista.
+    Fase 8 adiciona o cartao de Favoritos de volta com dados reais.
     """
     with get_session() as session:
         distribuicao_marca = (
@@ -224,6 +240,116 @@ def dashboard():
         cidade_mais_comum=cidade_mais_comum,
         ultimos=ultimos_dados,
         grafico_marcas=grafico_marcas,
+    )
+
+
+# -----------------------------------------------------------------
+# Fase 8: Favoritos
+# -----------------------------------------------------------------
+
+@app.route("/api/favoritos/<int:anuncio_id>", methods=["POST"])
+def favoritar(anuncio_id):
+    """
+    Adiciona um anuncio aos favoritos. Chamado via fetch() do JS no card.
+    Retorna JSON com o estado atualizado.
+    """
+    with get_session() as session:
+        # Verificar se o anuncio existe
+        anuncio = session.query(Anuncio).filter(Anuncio.id == anuncio_id).first()
+        if not anuncio:
+            return jsonify({"erro": "Anúncio não encontrado"}), 404
+
+        existe = (
+            session.query(Favorito)
+            .filter(Favorito.anuncio_id == anuncio_id)
+            .first()
+        )
+        if existe:
+            return jsonify({"favoritado": True, "msg": "Já está nos favoritos"})
+
+        session.add(Favorito(anuncio_id=anuncio_id))
+        # commit acontece automaticamente no get_session context manager
+
+    return jsonify({"favoritado": True, "msg": "Adicionado aos favoritos"})
+
+
+@app.route("/api/favoritos/<int:anuncio_id>", methods=["DELETE"])
+def desfavoritar(anuncio_id):
+    """
+    Remove um anuncio dos favoritos. Chamado via fetch() do JS no card.
+    """
+    with get_session() as session:
+        fav = (
+            session.query(Favorito)
+            .filter(Favorito.anuncio_id == anuncio_id)
+            .first()
+        )
+        if fav:
+            session.delete(fav)
+
+    return jsonify({"favoritado": False, "msg": "Removido dos favoritos"})
+
+
+@app.route("/api/favoritos/count")
+def favoritos_count():
+    """Retorna apenas a contagem de favoritos (para o badge do header via JS)."""
+    with get_session() as session:
+        total = session.query(Favorito).count()
+    return jsonify({"total": total})
+
+
+@app.route("/favoritos")
+def favoritos():
+    """
+    Fase 8: tela dedicada de favoritos — mesma aparencia dos cards de
+    anuncios, filtrada apenas pelos anuncios salvos pelo usuario.
+    """
+    ordenar = request.args.get("ordenar", default="recentes_fav")
+
+    with get_session() as session:
+        query = (
+            session.query(Anuncio)
+            .join(Favorito, Favorito.anuncio_id == Anuncio.id)
+            .filter(Anuncio.ativo.is_(True))
+        )
+
+        if ordenar == "preco_asc":
+            query = query.order_by(Anuncio.preco.asc())
+        elif ordenar == "preco_desc":
+            query = query.order_by(Anuncio.preco.desc())
+        elif ordenar == "km_asc":
+            query = query.order_by(Anuncio.km.asc())
+        elif ordenar == "ano_desc":
+            query = query.order_by(Anuncio.ano.desc())
+        else:  # "recentes_fav" - mais recentemente favoritado
+            query = query.order_by(Favorito.data_criacao.desc())
+
+        resultados = query.all()
+
+        favoritos_dados = [
+            {
+                "id": a.id,
+                "titulo": a.titulo,
+                "marca": a.marca,
+                "modelo": a.modelo,
+                "ano": a.ano,
+                "km": a.km,
+                "preco": float(a.preco) if a.preco is not None else None,
+                "cidade": a.cidade,
+                "estado": a.estado,
+                "url": a.url,
+                "whatsapp_link": a.whatsapp_link,
+                "fonte_nome": a.fonte.nome if a.fonte else "Desconhecida",
+                "favoritado": True,
+            }
+            for a in resultados
+        ]
+
+    return render_template(
+        "favoritos.html",
+        anuncios=favoritos_dados,
+        total_favoritos=len(favoritos_dados),
+        ordenar=ordenar,
     )
 
 

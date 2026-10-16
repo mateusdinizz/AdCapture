@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block titulo %}Favoritos · AdCapture{% endblock %}
+
+{% block conteudo %}
+
+<main class="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 w-full">
+
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div>
+            <h1 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <i data-lucide="heart" class="w-6 h-6 text-red-500"></i>
+                Meus Favoritos
+            </h1>
+            <p class="text-sm text-slate-500 mt-1">
+                <span id="favCounter">{{ total_favoritos }}</span> anúncio{{ 's' if total_favoritos != 1 else '' }} salvo{{ 's' if total_favoritos != 1 else '' }}
+            </p>
+        </div>
+
+        {% if anuncios %}
+        <form method="get" action="/favoritos" class="relative w-full sm:w-64">
+            <i data-lucide="arrow-down-up" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
+            <select name="ordenar" onchange="this.form.submit()"
+                    class="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-10 py-3 text-sm appearance-none outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="recentes_fav" {% if ordenar == "recentes_fav" %}selected{% endif %}>Mais recentes</option>
+                <option value="preco_asc" {% if ordenar == "preco_asc" %}selected{% endif %}>Menor preço</option>
+                <option value="preco_desc" {% if ordenar == "preco_desc" %}selected{% endif %}>Maior preço</option>
+                <option value="km_asc" {% if ordenar == "km_asc" %}selected{% endif %}>Menor quilometragem</option>
+                <option value="ano_desc" {% if ordenar == "ano_desc" %}selected{% endif %}>Ano mais novo</option>
+            </select>
+            <i data-lucide="chevron-down" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none"></i>
+        </form>
+        {% endif %}
+    </div>
+
+    {% if anuncios %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for a in anuncios %}
+        <article class="fav-card bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col">
+
+            <div class="relative aspect-[16/9] bg-slate-100 flex items-center justify-center">
+                <i data-lucide="image-off" class="w-8 h-8 text-slate-300"></i>
+
+                <span class="absolute top-3 left-3 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow
+                             {% if a.fonte_nome == 'OLX' %}bg-orange-500{% else %}bg-blue-600{% endif %}">
+                    {{ a.fonte_nome }}
+                </span>
+            </div>
+
+            <div class="p-4 flex flex-col flex-1">
+                <h3 class="font-semibold text-slate-900 leading-6 line-clamp-2">{{ a.titulo }}</h3>
+
+                <div class="flex items-baseline gap-2 mt-3">
+                    <span class="text-2xl font-bold text-slate-900">
+                        {% if a.preco %}R$ {{ "{:,.0f}".format(a.preco).replace(",", ".") }}{% else %}Sob consulta{% endif %}
+                    </span>
+                </div>
+
+                <div class="flex flex-wrap gap-2 mt-4">
+                    <span class="px-3 py-1.5 rounded-lg bg-slate-50 text-xs text-slate-600 flex items-center gap-1.5">
+                        <i data-lucide="calendar" class="w-3.5 h-3.5"></i>{{ a.ano or "—" }}
+                    </span>
+                    <span class="px-3 py-1.5 rounded-lg bg-slate-50 text-xs text-slate-600 flex items-center gap-1.5">
+                        <i data-lucide="gauge" class="w-3.5 h-3.5"></i>
+                        {% if a.km %}{{ "{:,.0f}".format(a.km).replace(",", ".") }} km{% else %}—{% endif %}
+                    </span>
+                    <span class="px-3 py-1.5 rounded-lg bg-slate-50 text-xs text-slate-600 flex items-center gap-1.5">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>{{ a.cidade or "—" }}
+                    </span>
+                </div>
+
+                <div class="flex gap-2 mt-5">
+                    <a href="{{ a.url }}" target="_blank"
+                       class="bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-medium flex-1 text-center transition">
+                        Ver Anúncio
+                    </a>
+                    {% if a.whatsapp_link %}
+                    <a href="{{ a.whatsapp_link }}" target="_blank"
+                       class="w-11 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition"
+                       aria-label="WhatsApp">
+                        <i data-lucide="message-circle" class="w-5 h-5"></i>
+                    </a>
+                    {% endif %}
+                    <button onclick="toggleFavorito({{ a.id }}, this)" type="button"
+                            class="w-11 rounded-xl flex items-center justify-center transition bg-red-50 text-red-500 hover:bg-red-100"
+                            aria-label="Remover dos favoritos"
+                            data-favoritado="true">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.501 5.501 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </button>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-20">
+        <div class="w-16 h-16 mx-auto rounded-full bg-slate-100 flex items-center justify-center mb-4">
+            <i data-lucide="heart" class="w-8 h-8 text-slate-300"></i>
+        </div>
+        <p class="text-xl font-semibold text-slate-600">Nenhum favorito ainda</p>
+        <p class="text-sm text-slate-400 mt-1">Clique no coração nos cards de anúncios para salvar aqui.</p>
+        <a href="/" class="inline-flex items-center gap-2 mt-6 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition">
+            <i data-lucide="search" class="w-4 h-4"></i>
+            Ver anúncios
+        </a>
+    </div>
+    {% endif %}
+
+</main>
+
+{% endblock %}
+
